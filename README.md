@@ -14,7 +14,8 @@ Output :
 
 ## Principles
 
-![flowchart](/Best MTB OSM Router(1).jpg)
+![Best MTB OSM Router(1)](https://user-images.githubusercontent.com/16464382/154336452-92f1e83c-98f1-4a9d-b1e8-67d587e725d4.jpg)
+
 https://miro.com/app/board/uXjVONfUPfw=/?invite_link_id=416360118516
 
 ## Dependencies
