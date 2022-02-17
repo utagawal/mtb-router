@@ -21,7 +21,7 @@ Should be using Docker containerisation
 
 ## Sample files
 
-A file containing around 1200 GPX tracks from Isère and Thône region in France is made available in an archive "sample-MTB-gpx-6938.zip"
+A file containing around 1200 GPX tracks from Isère and Rhône region in France is made available in an archive "sample-MTB-gpx-6938.zip"
 
 ## Dependencies
 
