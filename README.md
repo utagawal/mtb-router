@@ -11,6 +11,8 @@ Input :
 Output :
 * GPX file or geoJSON
 
+Should be written in python
+
 ## Principles
 
 ![Best MTB OSM Router(1)](https://user-images.githubusercontent.com/16464382/154336452-92f1e83c-98f1-4a9d-b1e8-67d587e725d4.jpg)
