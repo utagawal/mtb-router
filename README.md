@@ -15,7 +15,7 @@ Should be written in python
 
 ## Principles
 
-![Best MTB OSM Router(3)](https://user-images.githubusercontent.com/16464382/156894598-9d7dabc0-c28a-476f-9b59-607c43acee82.jpg)
+![Best MTB OSM Router(4)](https://user-images.githubusercontent.com/16464382/156894642-d9a8cec5-82ad-4b16-85da-c5f7aba048f7.jpg)
 
 https://miro.com/app/board/uXjVONfUPfw=/?invite_link_id=416360118516
 
