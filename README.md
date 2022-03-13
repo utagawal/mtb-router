@@ -29,7 +29,7 @@ A file containing around 1200 GPX tracks from Isère and Rhône region in France
 
  - PostGIS
  - ogr2ogr
- - [Graphhopper](https://github.com/graphhopper/graphhopper]
+ - [Graphhopper](https://github.com/graphhopper/graphhopper)
  - [PostGis reader for Graphopper](https://github.com/boldtrn/graphhopper-postgis)
  - (Brouter ?)
  
