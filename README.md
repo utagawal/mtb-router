@@ -15,7 +15,7 @@ Should be written in python
 
 ## Principles
 
-![Best MTB OSM Router(4)](https://user-images.githubusercontent.com/16464382/156894642-d9a8cec5-82ad-4b16-85da-c5f7aba048f7.jpg)
+![Best MTB OSM Router (2)](https://user-images.githubusercontent.com/16464382/158050010-ffe51e2e-8ae4-41ef-9e9d-bc3a23a7d2b0.jpg)
 
 https://miro.com/app/board/uXjVONfUPfw=/?invite_link_id=416360118516
 
@@ -29,6 +29,8 @@ A file containing around 1200 GPX tracks from Isère and Rhône region in France
 
  - PostGIS
  - ogr2ogr
- - Brouter or Graphhopper
+ - Graphhopper
+ - [PostGis reader for Graphopper] (https://github.com/boldtrn/graphhopper-postgis)
+ - (Brouter ?)
  
  
