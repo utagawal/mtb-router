@@ -1,6 +1,6 @@
 # mtb-router
 
-This project is intended to create the an API for Mountain Biking automatic map routing.
+This project is intended to create  an API for Mountain Biking **automatic** map routing.
 
 It should be based on a data source from MTB gpx files that will be used to supplement OSM with specific MTB data like path popularity.
 
