@@ -1,0 +1,23 @@
+#Lancer carte classiqque routing Graphhopper :
+
+sudo docker run -p 8989:8989 israelhikingmap/graphhopper --url https://download.geofabrik.de/europe/france/rhone-alpes-latest.osm.pbf --host 0.0.0.0
+
+sudo curl -XPOST -H "Content-Type: application/gpx+xml" "https://graphhopper.com/api/1/match?&key=f7a95ad4-0579-4d5d-9ef6-8c1cac915d59" --data @/srv/projects/mtb-router/GPX/sample-MTB-gpx-6938/new.gpx
+
+sudo curl -XPOST -H "Content-Type: application/gpx+xml" "http://localhost:8989/match?profile=car&key=f7a95ad4-0579-4d5d-9ef6-8c1cac915d59&type=gpx" --data @/srv/projects/mtb-router/GPX/sample-MTB-gpx-6938/test_lpeller_2.gpx
+
+sudo curl -XPOST -H "Content-Type: application/gpx+xml" -d @/srv/projects/mtb-router/GPX/sample-MTB-gpx-6938/test2.gpx "localhost:8989/match?profile=car&type=gpx"
+
+java -jar graphhopper-web-3.0-SNAPSHOT.jar match --file config.yml --profile car srv/projects/mtb-router/GPX/sample-MTB-gpx-6938/test_lpeller_2.gpx
+
+java -jar matching-web/target/graphhopper-map-matching-web-1.0-SNAPSHOT.jar import rhone-alpes-latest.osm.pbf --vehicle='bike'
+
+bigmichi1/graphhopper
+
+sudo docker run -p 8989:8989 bigmichi1/graphhopper --url https://download.geofabrik.de/europe/france/rhone-alpes-latest.osm.pbf --host 0.0.0.0
+
+
+sudo wget https://github.com/graphhopper/graphhopper/releases/download/5.3/graphhopper-web-5.3.jar https://raw.githubusercontent.com/graphhopper/graphhopper/5.x/config-example.yml http://download.geofabrik.de/europe/france/rhone-alpes-latest.osm.pbf
+
+wget /home/lpeller/graphhopper-web-5.3.jar /home/lpeller/config-example.yml /home/lpeller/rhone-alpes-latest.osm.pbf
+java -Ddw.graphhopper.datareader.file=rhone-alpes-latest.osm.pbf -jar *.jar server config.yml

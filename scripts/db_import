@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jun 21 10:59:14 2022
+
+@author: lpeller
+"""
+import psycopg2
+
+conn = psycopg2.connect(
+    host="localhost",
+    database="db_osm_routing",
+    user="user",
+    password="xxxxx")
+
+cursor = conn.cursor()
+query = "select * from tracks"
+cursor.execute(query)
+print("Selecting rows from mobile table using cursor.fetchall")
+tracks = cursor.fetchall()
