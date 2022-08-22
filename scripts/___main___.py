@@ -46,7 +46,6 @@ def ___main___():
     table = "otrouting_ways"
     path_original = '../GPX/Original_GPX/'
     precision = 0.001 #preccision of the GPX accuracy detection in km
-    
     script.match_GPX(url, path_gpx, params, headers, path_output)
     #Load the GPX files into the db_osm_routing database
     subprocess.call(['sh', 'data_loader.sh'])
@@ -57,14 +56,6 @@ def ___main___():
 
 #___init___()
 
-#Download graphhoper :
-#cd ./mtb-router
-#sudo wget https://github.com/graphhopper/graphhopper/releases/download/4.0/graphhopper-web-4.0.jar https://raw.githubusercontent.com/graphhopper/graphhopper/5.x/config-example.yml http://download.geofabrik.de/europe/france/rhone-alpes-latest.osm.pbf
+#Start the graphhopper server
 
-#Start the graphhopper server :
-#cd ./mtb-router
-#sudo java -Xms1G -Xmx2G -Ddw.graphhopper.datareader.file=rhone-alpes-latest.osm.pbf -jar graphhopper-web-5.3.jar server ./graphhopper_config/config.yml;
-#sudo java -Ddw.graphhopper.datareader.file=rhone-alpes-latest.osm.pbf -jar graphhopper-web-4.0.jar server ./graphhopper_config/config.yml;
-#sudo java -Xms1G -Xmx3G -jar graphhopper-web-4.0.jar server ./graphhopper_config/config.yml
-
-___main___()
+#___main___()

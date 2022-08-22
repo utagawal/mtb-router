@@ -57,6 +57,26 @@ def map_matching(url, path_gpx, params, headers, path_output):
 
 
 def match_GPX(url, path_gpx, params, headers, path_output):
+    """
+
+    Parameters
+    ----------
+    url : STRING
+        Url of match Graphhopper API
+    path_gpx : STRING
+        Path to original .gpx file
+    params : DICTIONARY
+        Parameters of the map matching API
+    headers : DICTIONARY
+        Headers of the POST request
+    path_output : STRING
+        Output to store the mapmatched GPX file
+
+    Returns
+    -------
+    All GPX mapmatched file from the path_gpx location at the outout path
+
+    """
     iteration = 0
     nb_files = str(len(glob.glob( os.path.join(path_gpx,'*.gpx'))))
     print('Starting Mapmatching process: '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
@@ -271,7 +291,7 @@ def ponderate(host, db_name, user, password, table):
 
 def construct_view(host, db_name, user, password, table):
     '''
-    Construire une vue pour utiliser graphhopper à partir d'une base de données plutôt qu'un fichier pbf (non utilisé)
+    Building a view from the database containing the gpx files, used to load graphhopper from a database  --- unused
     '''
 
     print('Connecting to database'+ db_name +': '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
@@ -368,7 +388,7 @@ def construct_view(host, db_name, user, password, table):
     conn.close()
     return l_way
 
-#-------------------- MAIN -----------------------
+#-------------------- TEST VALUES -----------------------
 url = 'http://localhost:8989/match'
 path_gpx = '../GPX/sample-MTB-gpx-6938/'
 headers = {
@@ -393,9 +413,3 @@ table = "otrouting_ways"
 
 
 gpx_file = '../GPX/sample-MTB-gpx-6938/utgtrack-20.gpx'
-#ponderate(host, db_name, user, password, table)
-#map_matching(url, path_gpx, params, headers, path_output)
-#match_GPX(url, path_gpx, params, headers, path_output)
-#segmentation(url, gpx_file, params, headers, path_output)
-#l_way = construct_view(host, db_name, user, password, table)
-extraction_non_OSM(host, db_name, user, password, path_gpx, path_original)
