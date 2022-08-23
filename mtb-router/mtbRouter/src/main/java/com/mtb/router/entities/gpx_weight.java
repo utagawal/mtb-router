@@ -7,17 +7,10 @@ import lombok.Data;
 
 import javax.persistence.*;
 
-@Data
-@AllArgsConstructor
-@Entity
-@Table(name = "otrouting_ways")
-public class gpx_weight {
-    @Id @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id")
-    public static Long id;
 
-    @Column(name = "gpx_weight")
-    public static Integer weight;
+public class gpx_weight {
+
+    public static Integer weight = 5;
     public static final String KEY = "gpx_weight";
 
     public static IntEncodedValue create() {

@@ -14,7 +14,7 @@ public class CustomTagParserFactory implements TagParserFactory {
             throw new IllegalArgumentException("Use lower case for TagParsers: " + name);
         if (gpx_weight.KEY.equals(name))
             return new CustomTagParser(lookup.getIntEncodedValue(gpx_weight.KEY));
-        else if (Roundabout.KEY.equals(name))
+        if (Roundabout.KEY.equals(name))
             return new OSMRoundaboutParser(lookup.getBooleanEncodedValue(Roundabout.KEY));
         else if (name.equals(RoadClass.KEY))
             return new OSMRoadClassParser(lookup.getEnumEncodedValue(RoadClass.KEY, RoadClass.class));

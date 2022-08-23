@@ -16,13 +16,13 @@ public class CustomTagParser implements TagParser {
 
     @Override
     public IntsRef handleWayTags(IntsRef edgeFlags, ReaderWay way, IntsRef relationFlags) {
-        if (way.hasTag(gpx_weight.KEY)) {
-            encodedValue.setInt(false, edgeFlags, gpx_weight.weight);
-        }
+        int GPX = 5;
 
-        if (way.getId() == gpx_weight.id){
-            encodedValue.setInt(false, edgeFlags, gpx_weight.weight);
+        if (way.hasTag(gpx_weight.KEY)) {
+            String noRoutingPriority = way.getTag(gpx_weight.KEY);
         }
+        encodedValue.setInt(false, edgeFlags, GPX);
+
         return edgeFlags;
     }
 
