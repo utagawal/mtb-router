@@ -19,9 +19,8 @@ public class CustomTagParser implements TagParser {
         int GPX = 5;
 
         if (way.hasTag(gpx_weight.KEY)) {
-            String noRoutingPriority = way.getTag(gpx_weight.KEY);
+            encodedValue.setInt(false, edgeFlags, GPX);
         }
-        encodedValue.setInt(false, edgeFlags, GPX);
 
         return edgeFlags;
     }
