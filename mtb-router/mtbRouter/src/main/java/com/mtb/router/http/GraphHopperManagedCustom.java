@@ -104,7 +104,7 @@ public class GraphHopperManagedCustom implements Managed {
     @Override
     public void start() {
         graphHopper.setEncodedValueFactory(new CustomEncodedValueFactory());
-        //graphHopper.setTagParserFactory(new CustomTagParserFactory());
+        graphHopper.setTagParserFactory(new CustomTagParserFactory());
         graphHopper.importOrLoad();
         logger.info("loaded graph at:{}, data_reader_file:{}, encoded values:{}, {} ints for edge flags, {}",
                 graphHopper.getGraphHopperLocation(), graphHopper.getOSMFile(),

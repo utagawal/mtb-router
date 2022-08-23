@@ -36,7 +36,7 @@ public class ImportCommand extends ConfiguredCommand<GraphHopperServerConfigurat
     protected void run(Bootstrap<GraphHopperServerConfiguration> bootstrap, Namespace namespace, GraphHopperServerConfiguration configuration) {
         GraphHopperManaged graphHopper = new GraphHopperManaged(configuration.getGraphHopperConfiguration());
         graphHopper.getGraphHopper().setEncodedValueFactory(new CustomEncodedValueFactory());
-        //graphHopper.getGraphHopper().setTagParserFactory(new CustomTagParserFactory());
+        graphHopper.getGraphHopper().setTagParserFactory(new CustomTagParserFactory());
         graphHopper.getGraphHopper().importAndClose();
     }
 
