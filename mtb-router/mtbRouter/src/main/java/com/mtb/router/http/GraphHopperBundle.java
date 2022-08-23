@@ -250,7 +250,7 @@ public class GraphHopperBundle implements ConfiguredBundle<GraphHopperBundleConf
         environment.lifecycle().manage(graphHopperManagedCustom);
         final GraphHopper graphHopper = graphHopperManagedCustom.getGraphHopper();
         graphHopper.setEncodedValueFactory(new CustomEncodedValueFactory());
-        graphHopper.setTagParserFactory(new CustomTagParserFactory());
+        //graphHopper.setTagParserFactory(new CustomTagParserFactory());
         environment.jersey().register(new AbstractBinder() {
             @Override
             protected void configure() {
