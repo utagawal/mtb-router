@@ -424,9 +424,9 @@ def osm2pgsql(input):
         if txt != "":
             txt = txt+"/"
         txt = txt+input[j]
-
-    #cmd = ['osm2pgsql', '--slim', '-C', '100', '-d', 'db_osm_routing', '-U', 'user', '-W', '-H', 'localhost', '-P', '5432', txt.replace("/","_")+'-latest.osm.bz2']
-    cmd = ['osm2pgsql','--slim', '-C', '4096', '-d', glob_db, '-U', glob_user, '-H', glob_host, '-P', glob_port, '/srv/projects/mtb-router/scripts/rhone-alpes-latest.osm.pbf']
+    style = r"D:\Utilisateur\Louis Peller\STAGE\osm2pgsql-bin\default.style" #osm2pgsql default.style file location, used with windows
+    cmd = ['osm2pgsql', '--slim', '-C', '100', '-d', 'db_osm_routing', '-U', 'user', '-H', 'localhost', '-P', '5432', '-S', style, 'rhone-alpes-latest.osm.bz2']
+    #cmd = ['osm2pgsql','--slim', '-C', '100', '-d', glob_db, '-U', glob_user, '-H', glob_host, '-P', glob_port, temp_path]
     log("log.txt", '    > subprocess.check_output(' + str(cmd) + ')')
     log("log.txt", '        start: '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
     subprocess.check_output(cmd)

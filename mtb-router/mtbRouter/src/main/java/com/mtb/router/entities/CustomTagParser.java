@@ -17,13 +17,11 @@ public class CustomTagParser implements TagParser {
     }
     @Override
     public IntsRef handleWayTags(IntsRef edgeFlags, ReaderWay way, IntsRef relationFlags) {
-        int GPX = 1;
+        int GPX = 0;
 
-        if (way.hasTag("tunnel")){
-            GPX = GetGPXWeight(1);
-            //GPX = 4;
-        }
-        if (GPX != 1){
+        GPX = GetGPXWeight(1, way.getId());
+
+        if (GPX >= 1){
             encodedValue.setInt(false, edgeFlags, GPX);
         }
 

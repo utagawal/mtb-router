@@ -9,7 +9,7 @@ Created on Mon Jun 20 16:51:07 2022
 import requests
 import subprocess
 import gpxpy
-import gpxtools as gpxt
+#import gpxtools as gpxt
 import glob
 import os
 import time
@@ -225,7 +225,6 @@ def extraction_non_OSM(host, db_name, user, password, path_gpx, path_original, p
             query = ("SELECT ST_Length('"+str(diff[0]).split(';')[1].split("'")[0]+"')")
             cursor.execute(query)
             l_diff = cursor.fetchall()
-            print(l_diff)
             f.write(str(fid)+','+name+','+str(l_diff[0][0]/l_gpx[0][0])+','+str(diff)+'\n' )
     f.close()
 
@@ -274,7 +273,7 @@ def ponderate(host, db_name, user, password, table):
     cursor.execute(query)
     l_gpx = cursor.fetchall()
     for j in range(0,len(l_gpx)):
-        print('Adding weight for GPX GPX route:    '+str(j)+'/'+str(len(l_gpx)))
+        print('Adding weight for GPX route:    '+str(j)+'/'+str(len(l_gpx)))
         query = ("SELECT ST_GeomFromWKB(ST_Buffer((SELECT wkb_geometry FROM tracks WHERE ogc_fid = " + str(l_gpx[j][0]) +"),0.00003))")
         cursor.execute(query)
         output = cursor.fetchall()  #buffer arount the GPX route, size = 3m
@@ -395,7 +394,7 @@ headers = {
     'Content-Type': 'application/gpx+xml',
 }
 params = {
-    'profile': 'mtb',       #profile of the route (car, bike,...)
+    'profile': 'mtb_c',       #profile of the route (car, bike,...)
     'type': 'gpx',      #type of the outut element (gpx, json,...)
     'gpx.route': 'false',       #if true, output file will ountain the original route 
     'traversal_keys': 'true',

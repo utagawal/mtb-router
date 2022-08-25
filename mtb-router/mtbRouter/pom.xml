@@ -90,6 +90,11 @@
             <artifactId>postgresql</artifactId>
             <version>42.2.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+            <version>3.1.2</version>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>

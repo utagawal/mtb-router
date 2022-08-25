@@ -25,26 +25,26 @@ def ___init___():
 
 def ___main___():
     #Match the gpx files
-    url = 'http://localhost:8989/match'
-    path_gpx = '../GPX/sample-MTB-gpx-6938/'
+    url = 'http://localhost:8989/match'             #url of the grapphopper API
+    path_gpx = '..\\GPX\\sample-MTB-gpx-6938\\'     #Path to get the GPX files that are unedited
     headers = {
         'Content-Type': 'application/gpx+xml',
     }
     params = {
-        'profile': 'mtb',       #profile of the route (car, bike,...)
+        'profile': 'mtb_c',       #profile of the route (car, bike,...)
         'type': 'gpx',      #type of the outut element (gpx, json,...)
         'gpx.route': 'false',       #if true, output file will ountain the original route 
         'traversal_keys': 'true',
         #'max_visited_nodes': '200',      #default=1000, type=int, the limit we use to search a route from one gps entry to the other to avoid exploring the whole graph in case of disconnected subnetworks.
         'force_repair': 'false ',  
     }
-    path_output = '../GPX/Matched_GPX/'
+    path_output = '..\\GPX\\Matched_GPX\\'
     host = 'localhost'
     db_name="db_osm_routing"
     user="user"
     password="xxxxx"
     table = "otrouting_ways"
-    path_original = '../GPX/Original_GPX/'
+    path_original = "..\\GPX\\Original_GPX\\"
     precision = 0.001 #preccision of the GPX accuracy detection in km
     script.match_GPX(url, path_gpx, params, headers, path_output)
     #Load the GPX files into the db_osm_routing database

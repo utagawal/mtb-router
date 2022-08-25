@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 public class JavaPostgreSqlRetrieve {
 
-    public static int GetGPXWeight(int id) {
+    public static int GetGPXWeight(int id, long wayid) {
 
         String url = "jdbc:postgresql://localhost:5432/test";
         String user = "postgres";
@@ -18,12 +18,11 @@ public class JavaPostgreSqlRetrieve {
         int cal = 0;
 
         try (Connection con = DriverManager.getConnection(url, user, password);
-             PreparedStatement pst = con.prepareStatement("SELECT gpx_weight FROM otrouting_ways where id = 1");
+             PreparedStatement pst = con.prepareStatement("SELECT gpx_weight FROM otrouting_ways where id =" + wayid);
              ResultSet rs = pst.executeQuery()) {
 
             while (rs.next()) {
                 cal = rs.getInt(1);
-                System.out.print(cal);
             }
 
         } catch (SQLException ex) {

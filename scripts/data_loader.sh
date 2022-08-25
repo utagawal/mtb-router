@@ -1,4 +1,4 @@
-#!/bin/sh
+#! Locate the mtb-router folder
 cd /srv/projects/mtb-router
 
 # Load the GPX files in the db_osm_routing postgres database

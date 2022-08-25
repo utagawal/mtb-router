@@ -10,13 +10,13 @@ deal with ['europe', 'france', 'rhone-alpes'] 1/1
 ------------------------------------------------------------------------------
 initialisation
 ------------------------------------------------------------------------------
-2022-06-23 16:43:15
+2022-08-24 17:13:05
     DROP TABLE IF EXISTS _work_otrouting_osm_nodes_ninter
     DROP TABLE IF EXISTS planet_osm_*
     CREATE EXTENSION IF NOT EXISTS postgis
-        ('POSTGIS="3.2.0 c3e3cc0" [EXTENSION] PGSQL="140" GEOS="3.10.2-CAPI-1.16.0" PROJ="8.2.1" LIBXML="2.9.12" LIBJSON="0.15" LIBPROTOBUF="1.3.3" WAGYU="0.5.0 (Internal)"',)
+        ('POSTGIS="3.2.3 3.2.3" [EXTENSION] PGSQL="120" GEOS="3.10.3-CAPI-1.16.1" PROJ="7.2.1" LIBXML="2.9.9" LIBJSON="0.12" LIBPROTOBUF="1.2.1" WAGYU="0.5.0 (Internal)"',)
     CREATE EXTENSION IF NOT EXISTS pgrouting
-        ('3.3.0',)
+        ('3.3.1',)
     CREATE TABLE IF NOT EXISTS otrouting_master
     CREATE INDEX IF NOT EXISTS otrouting_master_status
     CREATE INDEX IF NOT EXISTS otrouting_master_geom_polygon
@@ -35,20 +35,336 @@ initialisation
 
 upload data from download.geofabrik.de - ['europe', 'france', 'rhone-alpes'] 1/1
 ------------------------------------------------------------------------------
-2022-06-23 16:43:15
-    > subprocess.check_output(['wget', '-O', 'europe_france_rhone-alpes-latest.osm.bz2', 'http://download.geofabrik.de/europe/france/rhone-alpes-latest.osm.bz2'])
-        start: 2022-06-23 16:43:15
-        end: 2022-06-23 16:58:33
-    > subprocess.check_output(['wget', '-O', 'europe_france_rhone-alpes.poly', 'http://download.geofabrik.de/europe/france/rhone-alpes.poly'])
-        start: 2022-06-23 16:58:33
-        end: 2022-06-23 16:58:33
+2022-08-24 17:13:05
 
 update master database - ['europe', 'france', 'rhone-alpes'] 1/1
 ------------------------------------------------------------------------------
-2022-06-23 16:58:33
+2022-08-24 17:13:05
 
 import osm data with osm2pgsql - ['europe', 'france', 'rhone-alpes'] 1/1
 ------------------------------------------------------------------------------
-2022-06-23 16:58:33
-    > subprocess.check_output(['osm2pgsql', '--slim', '-C', '100', '-d', 'db_osm_routing', '-U', 'user', '-H', 'localhost', '-P', '5432', 'europe_france_rhone-alpes-latest.osm.bz2'])
-        start: 2022-06-23 16:58:33
+2022-08-24 17:13:05
+    > subprocess.check_output(['osm2pgsql', '--slim', '-C', '100', '-d', 'db_osm_routing', '-U', 'user', '-H', 'localhost', '-P', '5432', '-S', 'D:\\Utilisateur\\Louis Peller\\STAGE\\osm2pgsql-bin\\default.style', 'rhone-alpes-latest.osm.bz2'])
+        start: 2022-08-24 17:13:05
+        end: 2022-08-24 18:33:44
+
+read osm data and populate _work_otrouting_osm_nodes_ninter table - ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+2022-08-24 18:33:46
+    Connect DataBase
+    6004902 entries in planet_osm_ways table
+    select planet_osm_ways table entries
+    START PROCESSING
+        0 %   -   0s
+        1 %   -   78s
+        2 %   -   137s
+        3 %   -   233s
+        4 %   -   277s
+        5 %   -   317s
+        6 %   -   393s
+        7 %   -   433s
+        8 %   -   470s
+        9 %   -   485s
+        10 %   -   525s
+        11 %   -   606s
+        12 %   -   660s
+        13 %   -   712s
+        14 %   -   773s
+        15 %   -   798s
+        16 %   -   846s
+        17 %   -   943s
+        18 %   -   1015s
+        19 %   -   1083s
+        20 %   -   1132s
+        21 %   -   1180s
+        22 %   -   1237s
+        23 %   -   1301s
+        24 %   -   1426s
+        25 %   -   1488s
+        26 %   -   1541s
+        27 %   -   1604s
+        28 %   -   1666s
+        29 %   -   1750s
+        30 %   -   1807s
+        31 %   -   1880s
+        32 %   -   1982s
+        33 %   -   2025s
+        34 %   -   2113s
+        35 %   -   2142s
+        36 %   -   2346s
+        37 %   -   2470s
+        38 %   -   2638s
+        39 %   -   2699s
+        40 %   -   2790s
+        41 %   -   2893s
+        42 %   -   3010s
+        43 %   -   3209s
+        44 %   -   3432s
+        45 %   -   3526s
+        46 %   -   3635s
+        47 %   -   3783s
+        48 %   -   3930s
+        49 %   -   4032s
+        50 %   -   4173s
+        51 %   -   4453s
+        52 %   -   4615s
+        53 %   -   4750s
+        54 %   -   4899s
+        55 %   -   5011s
+        56 %   -   5164s
+        57 %   -   5227s
+        58 %   -   5392s
+        59 %   -   5658s
+        60 %   -   5850s
+        61 %   -   6093s
+        62 %   -   6261s
+        63 %   -   6437s
+        64 %   -   6912s
+        65 %   -   7309s
+        66 %   -   7563s
+        67 %   -   7819s
+        68 %   -   8028s
+        69 %   -   8229s
+        70 %   -   8432s
+        71 %   -   8664s
+        72 %   -   8855s
+        73 %   -   9035s
+        74 %   -   9263s
+        75 %   -   9588s
+        76 %   -   9892s
+        77 %   -   10479s
+        78 %   -   12049s
+        79 %   -   12823s
+        80 %   -   13163s
+        81 %   -   13225s
+        82 %   -   13230s
+        83 %   -   13243s
+        84 %   -   13256s
+        85 %   -   13270s
+        86 %   -   13280s
+        87 %   -   13300s
+        88 %   -   13319s
+        89 %   -   13387s
+        90 %   -   13468s
+        91 %   -   13525s
+        92 %   -   13580s
+        93 %   -   13610s
+        94 %   -   13657s
+        95 %   -   13699s
+        96 %   -   13776s
+        97 %   -   13964s
+        98 %   -   14126s
+        99 %   -   14236s
+        100 %   -   14375s
+    ALL ROWS READ IN 14384s
+
+read osm data and populate otrouting_ways table - ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+2022-08-24 22:34:27
+    6004902 entries in planet_osm_ways table
+    select planet_osm_ways table entries
+    START PROCESSING
+        0 %   -   0s
+        1 %   -   80s
+        2 %   -   136s
+        3 %   -   241s
+        4 %   -   277s
+        5 %   -   314s
+        6 %   -   372s
+        7 %   -   402s
+        8 %   -   437s
+        9 %   -   451s
+        10 %   -   488s
+        11 %   -   559s
+        12 %   -   607s
+        13 %   -   654s
+        14 %   -   721s
+        15 %   -   742s
+        16 %   -   780s
+        17 %   -   853s
+        18 %   -   907s
+        19 %   -   960s
+        20 %   -   999s
+        21 %   -   1036s
+        22 %   -   1076s
+        23 %   -   1118s
+        24 %   -   1192s
+        25 %   -   1226s
+        26 %   -   1251s
+        27 %   -   1281s
+        28 %   -   1309s
+        29 %   -   1347s
+        30 %   -   1372s
+        31 %   -   1405s
+        32 %   -   1442s
+        33 %   -   1457s
+        34 %   -   1486s
+        35 %   -   1495s
+        36 %   -   1531s
+        37 %   -   1556s
+        38 %   -   1592s
+        39 %   -   1605s
+        40 %   -   1626s
+        41 %   -   1650s
+        42 %   -   1678s
+        43 %   -   1717s
+        44 %   -   1764s
+        45 %   -   1784s
+        46 %   -   1807s
+        47 %   -   1834s
+        48 %   -   1860s
+        49 %   -   1877s
+        50 %   -   1898s
+        51 %   -   1942s
+        52 %   -   1964s
+        53 %   -   1984s
+        54 %   -   2005s
+        55 %   -   2021s
+        56 %   -   2042s
+        57 %   -   2051s
+        58 %   -   2071s
+        59 %   -   2101s
+        60 %   -   2123s
+        61 %   -   2148s
+        62 %   -   2165s
+        63 %   -   2184s
+        64 %   -   2209s
+        65 %   -   2239s
+        66 %   -   2262s
+        67 %   -   2288s
+        68 %   -   2312s
+        69 %   -   2335s
+        70 %   -   2360s
+        71 %   -   2383s
+        72 %   -   2406s
+        73 %   -   2428s
+        74 %   -   2446s
+        75 %   -   2468s
+        76 %   -   2488s
+        77 %   -   2515s
+        78 %   -   2576s
+        79 %   -   2610s
+        80 %   -   2628s
+        81 %   -   2630s
+        82 %   -   2631s
+        83 %   -   2632s
+        84 %   -   2633s
+        85 %   -   2634s
+        86 %   -   2635s
+        87 %   -   2637s
+        88 %   -   2638s
+        89 %   -   2642s
+        90 %   -   2646s
+        91 %   -   2649s
+        92 %   -   2652s
+        93 %   -   2654s
+        94 %   -   2656s
+        95 %   -   2658s
+        96 %   -   2662s
+        97 %   -   2668s
+        98 %   -   2676s
+        99 %   -   2680s
+        100 %   -   2686s
+    ALL ROWS READ IN 2686s
+
+update master database - ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+2022-08-24 23:20:24
+    UPDATE otrouting_master table new row
+        log:
+imported with ot_routing_v1.3.py
+1979874 rows inserted into TABLE otrouting_ways
+1580613 rows inserted into TABLE otrouting_points
+    Delete obsolete data from otrouting_ways and otrouting_points TABLE
+        DELETE FROM otrouting_ways WHERE id_master=1
+        DELETE FROM otrouting_points WHERE id_master=1
+        UPDATE otrouting_master SET status='obsolete' WHERE id=1
+        DELETE FROM otrouting_ways WHERE id_master=2
+        DELETE FROM otrouting_points WHERE id_master=2
+        UPDATE otrouting_master SET status='obsolete' WHERE id=2
+        DELETE FROM otrouting_ways WHERE id_master=3
+        DELETE FROM otrouting_points WHERE id_master=3
+        UPDATE otrouting_master SET status='obsolete' WHERE id=3
+        DELETE FROM otrouting_ways WHERE id_master=4
+        DELETE FROM otrouting_points WHERE id_master=4
+        UPDATE otrouting_master SET status='obsolete' WHERE id=4
+        DELETE FROM otrouting_ways WHERE id_master=5
+        DELETE FROM otrouting_points WHERE id_master=5
+        UPDATE otrouting_master SET status='obsolete' WHERE id=5
+        DELETE FROM otrouting_ways WHERE id_master=6
+        DELETE FROM otrouting_points WHERE id_master=6
+        UPDATE otrouting_master SET status='obsolete' WHERE id=6
+        DELETE FROM otrouting_ways WHERE id_master=7
+        DELETE FROM otrouting_points WHERE id_master=7
+        UPDATE otrouting_master SET status='obsolete' WHERE id=7
+        DELETE FROM otrouting_ways WHERE id_master=8
+        DELETE FROM otrouting_points WHERE id_master=8
+        UPDATE otrouting_master SET status='obsolete' WHERE id=8
+        DELETE FROM otrouting_ways WHERE id_master=9
+        DELETE FROM otrouting_points WHERE id_master=9
+        UPDATE otrouting_master SET status='obsolete' WHERE id=9
+        DELETE FROM otrouting_ways WHERE id_master=10
+        DELETE FROM otrouting_points WHERE id_master=10
+        UPDATE otrouting_master SET status='obsolete' WHERE id=10
+        DELETE FROM otrouting_ways WHERE id_master=11
+        DELETE FROM otrouting_points WHERE id_master=11
+        UPDATE otrouting_master SET status='obsolete' WHERE id=11
+        DELETE FROM otrouting_ways WHERE id_master=12
+        DELETE FROM otrouting_points WHERE id_master=12
+        UPDATE otrouting_master SET status='obsolete' WHERE id=12
+        DELETE FROM otrouting_ways WHERE id_master=13
+        DELETE FROM otrouting_points WHERE id_master=13
+        UPDATE otrouting_master SET status='obsolete' WHERE id=13
+        DELETE FROM otrouting_ways WHERE id_master=14
+        DELETE FROM otrouting_points WHERE id_master=14
+        UPDATE otrouting_master SET status='obsolete' WHERE id=14
+        DELETE FROM otrouting_ways WHERE id_master=15
+        DELETE FROM otrouting_points WHERE id_master=15
+        UPDATE otrouting_master SET status='obsolete' WHERE id=15
+        DELETE FROM otrouting_ways WHERE id_master=16
+        DELETE FROM otrouting_points WHERE id_master=16
+        UPDATE otrouting_master SET status='obsolete' WHERE id=16
+        DELETE FROM otrouting_ways WHERE id_master=17
+        DELETE FROM otrouting_points WHERE id_master=17
+        UPDATE otrouting_master SET status='obsolete' WHERE id=17
+        DELETE FROM otrouting_ways WHERE id_master=18
+        DELETE FROM otrouting_points WHERE id_master=18
+        UPDATE otrouting_master SET status='obsolete' WHERE id=18
+        DELETE FROM otrouting_ways WHERE id_master=19
+        DELETE FROM otrouting_points WHERE id_master=19
+        UPDATE otrouting_master SET status='obsolete' WHERE id=19
+        DELETE FROM otrouting_ways WHERE id_master=20
+        DELETE FROM otrouting_points WHERE id_master=20
+        UPDATE otrouting_master SET status='obsolete' WHERE id=20
+        DELETE FROM otrouting_ways WHERE id_master=21
+        DELETE FROM otrouting_points WHERE id_master=21
+        UPDATE otrouting_master SET status='obsolete' WHERE id=21
+        DELETE FROM otrouting_ways WHERE id_master=22
+        DELETE FROM otrouting_points WHERE id_master=22
+        UPDATE otrouting_master SET status='obsolete' WHERE id=22
+        DELETE FROM otrouting_ways WHERE id_master=23
+        DELETE FROM otrouting_points WHERE id_master=23
+        UPDATE otrouting_master SET status='obsolete' WHERE id=23
+        DELETE FROM otrouting_ways WHERE id_master=24
+        DELETE FROM otrouting_points WHERE id_master=24
+        UPDATE otrouting_master SET status='obsolete' WHERE id=24
+        DELETE FROM otrouting_ways WHERE id_master=25
+        DELETE FROM otrouting_points WHERE id_master=25
+        UPDATE otrouting_master SET status='obsolete' WHERE id=25
+        DELETE FROM otrouting_ways WHERE id_master=26
+        DELETE FROM otrouting_points WHERE id_master=26
+        UPDATE otrouting_master SET status='obsolete' WHERE id=26
+    VACUUM ANALYZE otrouting_ways
+    VACUUM ANALYZE otrouting_points
+
+clean database - ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+2022-08-24 23:21:17
+    DROP TABLE IF EXISTS _work_otrouting_osm_nodes_ninter
+    DROP TABLE IF EXISTS planet_osm_*
+
+------------------------------------------------------------------------------
+2022-08-24 23:21:19
+
+
+
