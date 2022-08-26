@@ -1,0 +1,44 @@
+{
+ "priority": [
+  {
+   "if": "road_class == STEPS",
+   "multiply_by": "0"
+  },
+  {
+   "if": "gpx_weight >= 30",
+   "multiply_by": "1"
+  },
+  {
+   "else_if": "gpx_weight >= 20",
+   "multiply_by": "0.7"
+  },
+  {
+   "else_if": "gpx_weight >= 10",
+   "multiply_by": "0.5"
+  },
+  {
+   "if": "gpx_weight < 10",
+   "multiply_by": "0.1"
+  },
+  {
+   "if": "mtb_rating == 1",
+   "multiply_by": "0.9"
+  },
+  {
+   "if": "mtb_rating == 2",
+   "multiply_by": "0.4"
+  },
+  {
+   "if": "mtb_rating == 3",
+   "multiply_by": "0.3"
+  },
+  {
+   "if": "mtb_rating == 4",
+   "multiply_by": "0.1"
+  },
+  {
+   "if": "mtb_rating >= 5",
+   "multiply_by": "0"
+  }
+ ]
+}

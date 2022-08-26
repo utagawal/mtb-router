@@ -1,0 +1,48 @@
+
+1 - ['europe', 'france', 'rhone-alpes']
+
+
+
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+deal with ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+initialisation
+------------------------------------------------------------------------------
+2022-08-24 17:07:54
+    DROP TABLE IF EXISTS _work_otrouting_osm_nodes_ninter
+    DROP TABLE IF EXISTS planet_osm_*
+    CREATE EXTENSION IF NOT EXISTS postgis
+        ('POSTGIS="3.2.3 3.2.3" [EXTENSION] PGSQL="120" GEOS="3.10.3-CAPI-1.16.1" PROJ="7.2.1" LIBXML="2.9.9" LIBJSON="0.12" LIBPROTOBUF="1.2.1" WAGYU="0.5.0 (Internal)"',)
+    CREATE EXTENSION IF NOT EXISTS pgrouting
+        ('3.3.1',)
+    CREATE TABLE IF NOT EXISTS otrouting_master
+    CREATE INDEX IF NOT EXISTS otrouting_master_status
+    CREATE INDEX IF NOT EXISTS otrouting_master_geom_polygon
+    CREATE TABLE IF NOT EXISTS otrouting_points
+    CREATE INDEX IF NOT EXISTS otrouting_points_id
+    CREATE INDEX IF NOT EXISTS otrouting_points_id_master
+    CREATE INDEX IF NOT EXISTS otrouting_points_geom_point_gist
+    CREATE TABLE IF NOT EXISTS otrouting_ways
+    CREATE INDEX IF NOT EXISTS otrouting_ways_geom_center_gist
+    CREATE INDEX IF NOT EXISTS otrouting_ways_id_master
+    CREATE INDEX IF NOT EXISTS otrouting_ways_factor_pedestrian
+    CREATE INDEX IF NOT EXISTS otrouting_ways_factor_mountainbike
+    CREATE INDEX IF NOT EXISTS otrouting_ways_factor_roadcycle
+    CREATE INDEX IF NOT EXISTS otrouting_ways_factor_car
+    CREATE TABLE IF NOT EXISTS _work_otrouting_osm_nodes_ninter
+
+upload data from download.geofabrik.de - ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+2022-08-24 17:07:55
+
+update master database - ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+2022-08-24 17:07:55
+
+import osm data with osm2pgsql - ['europe', 'france', 'rhone-alpes'] 1/1
+------------------------------------------------------------------------------
+2022-08-24 17:07:55
+    > subprocess.check_output(['osm2pgsql', '--slim', '-C', '100', '-d', 'db_osm_routing', '-U', 'user', '-W', '-H', 'localhost', '-P', '5432', 'rhone-alpes-latest.osm.bz2'])
+        start: 2022-08-24 17:07:55
