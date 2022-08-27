@@ -190,5 +190,3 @@ A file containing around 1200 GPX tracks from Isère and Rhône region in France
  - [PostGIS](https://github.com/utagawal/mtb-router/wiki/postgre-postgis-installation-and-OSM-data-import)
  - ogr2ogr
  - [Graphhopper](https://github.com/graphhopper/graphhopper)
- - [PostGis reader for Graphopper](https://github.com/boldtrn/graphhopper-postgis)
- - (Brouter ?)
