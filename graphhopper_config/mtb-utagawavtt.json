@@ -1,0 +1,34 @@
+{
+"priority": [{
+"if": "max_speed >= 50",
+"multiply_by": "0.1"
+},
+{
+"if": "mtb_rating > 5",
+"multiply_by": "0.1"
+},
+{
+"if": "road_class == PRIMARY || road_class == SECONDARY",
+"multiply_by": "0.2"
+},       
+{             
+"if": "road_class == TRACK || road_class == PATH",
+"multiply_by": "0.9"
+},
+{
+"if": "road_environment == TUNNEL",
+"multiply_by": "0.01"
+},
+{
+"if": "surface == PAVED",
+"multiply_by": "0.1"
+},
+{
+"if": "smoothness == VERY_HORRIBLE",
+"multiply_by": "0.9"
+}
+],
+"distance_influence": 15,
+"speed": [],
+"areas": {}
+}
