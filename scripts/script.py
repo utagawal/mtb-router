@@ -196,37 +196,35 @@ def extraction_non_OSM(host, db_name, user, password, path_gpx, path_original, p
         password=password)
     cursor = conn.cursor()
     print('Filling database with the original GPX files : '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
-    query = ("DROP TABLE gpx_origine")
-    cursor.execute(query)
+    cursor.execute("DROP TABLE IF EXISTS gpx_origine")
     os.system('for FILE in ../GPX/Original_GPX/*.gpx; do ogr2ogr -skipfailures -update -append -f "PostgreSQL"  PG:"host="localhost" user="user" dbname="db_osm_routing" password="xxxxx"" -nlt MULTILINESTRING -nln gpx_origine $FILE ; done')
-    query = ("SELECT ogc_fid,name FROM gpx_origine")
-    cursor.execute(query)
-    liste_gpx = cursor.fetchall()
-    f = open("../GPX/segments_hors_osm.csv",'w')
-    f.write('id_origine,name,accuracy,remaining geometry\n')
+
     print('Searching for segments that that are too far from the map matched GPX file : '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
-    for j in range(0,len(liste_gpx)):
-        buffer = ''
-        fid = liste_gpx[j][0]
-        name = liste_gpx[j][1]
-        query = ("SELECT ST_GeomFromWKB(ST_Buffer((SELECT wkb_geometry FROM tracks WHERE name = '" + str(name).replace("'", ' ') +"' LIMIT 1),"+str(precision)+"))")
-        cursor.execute(query)
-        buffer = cursor.fetchall()
-        query = ("SELECT ST_GeomFromWKB(wkb_geometry) FROM gpx_origine WHERE ogc_fid = " + str(fid))
-        cursor.execute(query)
-        gpx = cursor.fetchall()
-        if buffer != '' and buffer[0][0] != None:
-            query = ("SELECT ST_Length('"+str(gpx[0][0])+"')")
-            cursor.execute(query)
-            l_gpx = cursor.fetchall()
-            query = ("SELECT ST_AsEWKT(ST_GeomFromWKB(ST_Difference('"+str(gpx[0][0])+"','"+str(buffer[0][0])+"'),4326))")
-            cursor.execute(query)
-            diff = cursor.fetchall()
-            query = ("SELECT ST_Length('"+str(diff[0]).split(';')[1].split("'")[0]+"')")
-            cursor.execute(query)
-            l_diff = cursor.fetchall()
-            f.write(str(fid)+','+name+','+str(l_diff[0][0]/l_gpx[0][0])+','+str(diff)+'\n' )
-    f.close()
+
+    query = """
+    SELECT
+        gpx.ogc_fid,
+        gpx.name,
+        ST_Length(ST_Difference(gpx.wkb_geometry, buffer.geom)) / ST_Length(gpx.wkb_geometry) as accuracy,
+        ST_AsEWKT(ST_Difference(gpx.wkb_geometry, buffer.geom)) as remaining_geometry
+    FROM
+        gpx_origine AS gpx
+    JOIN
+        (SELECT name, ST_Buffer(wkb_geometry, %s) as geom FROM tracks) AS buffer
+    ON
+        gpx.name = buffer.name;
+    """
+
+    cursor.execute(query, (precision,))
+    results = cursor.fetchall()
+
+    with open("../GPX/segments_hors_osm.csv",'w') as f:
+        f.write('id_origine,name,accuracy,remaining geometry\n')
+        for row in results:
+            f.write(','.join(map(str, row)) + '\n')
+
+    conn.close()
+    print('Finished searching for segments: '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
 
         
     
@@ -265,26 +263,37 @@ def ponderate(host, db_name, user, password, table):
     query = ('ALTER TABLE '+ table +' ADD COLUMN IF NOT EXISTS gpx_weight INT DEFAULT 0')    #Creating the weight column
     cursor.execute(query)
     conn.commit()
-    query = ('UPDATE '+ table +' SET gpx_weight = 0 WHERE gpx_weight != 0')    #Reinitialize Column value
-    cursor.execute(query)
-    conn.commit()
+
     print('Starting weighting process: '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
-    query = ("SELECT ogc_fid FROM tracks")
-    cursor.execute(query)
-    l_gpx = cursor.fetchall()
-    for j in range(0,len(l_gpx)):
-        print('Adding weight for GPX route:    '+str(j)+'/'+str(len(l_gpx)))
-        query = ("SELECT ST_GeomFromWKB(ST_Buffer((SELECT wkb_geometry FROM tracks WHERE ogc_fid = " + str(l_gpx[j][0]) +"),0.00003))")
-        cursor.execute(query)
-        output = cursor.fetchall()  #buffer arount the GPX route, size = 3m
-        query2 = ("SELECT id FROM "+ table +" WHERE ST_Within(ST_Transform(geom_linestring,4326), '" + str(output[0][0]) + "')")
-        cursor.execute(query2)
-        l_way = cursor.fetchall() #contains all ways ids in the buffer
-        for i in range(0,len(l_way)):
-            query = ('UPDATE otrouting_ways SET gpx_weight = gpx_weight + 1 WHERE id = ' + str(l_way[i][0]))    #Update the column weight
-            cursor.execute(query)
-            conn.commit()
+
+    update_query = f"""
+    WITH way_weights AS (
+        SELECT
+            ways.id,
+            count(tracks.ogc_fid) as weight
+        FROM
+            {table} AS ways
+        JOIN
+            tracks ON ST_Within(ST_Transform(ways.geom_linestring, 4326), ST_Buffer(tracks.wkb_geometry, 0.00003))
+        GROUP BY
+            ways.id
+    )
+    UPDATE
+        {table}
+    SET
+        gpx_weight = way_weights.weight
+    FROM
+        way_weights
+    WHERE
+        {table}.id = way_weights.id;
+    """
+
+    cursor.execute(f"UPDATE {table} SET gpx_weight = 0;")
+    cursor.execute(update_query)
+    conn.commit()
+
     conn.close()
+    print('Weighting process finished: '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
 
 
 
