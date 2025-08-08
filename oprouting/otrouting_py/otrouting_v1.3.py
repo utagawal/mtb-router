@@ -183,28 +183,6 @@ def clean_db():
     cur.close()
     conn.close()
 
-def read_osm_tag(tags, tValues):
-    oReturn = {}
-    oReturn["index"] = []
-    if len(tValues) == 0:
-        if tags != None:
-            for i in range(0, len(tags), 2):
-                oReturn[tags[i]] = tags[i+1].replace("'"," ")
-                oReturn["index"].append(tags[i])
-    else:    
-        for i in range(0, len(tValues)):
-                oReturn[tValues[i]] = None
-                if tags != None:
-                    index = -1
-                    for ii in range(0, len(tags)):
-                        if tags[ii] == tValues[i]:
-                                index = ii
-                                break;
-                    if index >= 0 and index+1 < len(tags):
-                            oReturn[tValues[i]] = tags[index+1].replace("'"," ")
-                            oReturn["index"].append(tValues[i])
-    return oReturn
-
 def init():
     conn = psycopg2.connect("dbname="+glob_db+" user="+glob_user+" password="+glob_password+" host="+glob_host+" port="+glob_port)
     cur = conn.cursor()
@@ -262,6 +240,23 @@ def init():
     #working table remove at the end of the execution script
     log("log.txt", '    CREATE TABLE IF NOT EXISTS _work_otrouting_osm_nodes_ninter')
     cur.execute("CREATE TABLE IF NOT EXISTS _work_otrouting_osm_nodes_ninter(id bigint, geom_point geometry(Point,3857), ninter int, CONSTRAINT _work_otrouting_osm_nodes_ninter_pkey PRIMARY KEY (id)) ")
+
+    sql = """
+    CREATE OR REPLACE FUNCTION get_tag(tags text[], key text)
+    RETURNS text AS $$
+    DECLARE
+        val text;
+    BEGIN
+        FOR i IN 1..array_length(tags, 1) BY 2 LOOP
+            IF tags[i] = key THEN
+                RETURN tags[i+1];
+            END IF;
+        END LOOP;
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
+    """
+    cur.execute(sql)
 
     conn.commit()
     cur.close()
@@ -432,474 +427,162 @@ def osm2pgsql(input):
     subprocess.check_output(cmd)
     log("log.txt", '        end: '+str(time.strftime("%Y-%m-%d %H:%M:%S")))
 
-def create_points(id_master):
-    log("log.txt", '    Connect DataBase')
+
+def process_osm_data_sql(id_master):
     conn = psycopg2.connect("dbname="+glob_db+" user="+glob_user+" password="+glob_password+" host="+glob_host+" port="+glob_port)
     cur = conn.cursor()
-    cur2 = conn.cursor()
-    cur3 = conn.cursor()
 
-    #count number of rows to be read
-    cur.execute("SELECT COUNT(*) FROM planet_osm_ways")
-    data=cur.fetchone()
-    n_rows = data[0]
-    log("log.txt", "    " + str(n_rows) + " entries in planet_osm_ways table")
-    log("log.txt", "    select planet_osm_ways table entries")
-    cur.execute("SELECT nodes, tags FROM planet_osm_ways")
-    log("log.txt", "    START PROCESSING")
-    last_pc = -1
-    i_row = 0
-    time0 = time.time()
-    while True:
-        i_row = i_row + 1
-        #if i_row == 10:
-        #    break
-        if int(i_row*1.0/n_rows * 100) > last_pc:
-            last_pc = int(i_row*1.0/n_rows * 100)
-            log("log.txt", "        " + str(last_pc) + ' %   -   ' + str(int(time.time() - time0)) + "s")
-        data = cur.fetchone()
-        if str(data).strip() == "None":
-            #all line have been read
-            break
-        osmTags = read_osm_tag(data[1], ["highway"])
-        if "highway" in osmTags["index"]:
-            tNodes = data[0]
-            for i in range(0, len(tNodes)):
-                if i == 0 or i == len(tNodes)-1:
-                    #starting or ending of the way
-                    delta_ninter = 2
-                else:
-                    delta_ninter = 1
-                cur2.execute("SELECT ninter FROM _work_otrouting_osm_nodes_ninter WHERE id="+str(tNodes[i]))
-                data2 = cur2.fetchone()
-                if str(data2).strip() == "None":
-                    #nodes does not exists
-                    cur2.execute("SELECT id, lon, lat FROM planet_osm_nodes WHERE id="+str(tNodes[i]))
-                    data2=cur2.fetchone()
-                    geom = str(data2[1]/factor_osm) + " " + str(data2[2]/factor_osm)
+    log("log.txt", '    TRUNCATE _work_otrouting_osm_nodes_ninter')
+    cur.execute("TRUNCATE _work_otrouting_osm_nodes_ninter")
 
-                    sql = "INSERT INTO _work_otrouting_osm_nodes_ninter (id, geom_point, ninter) VALUES("+str(data2[0])+", ST_Transform(ST_PointFromText('POINT("+geom+")', 4326), 3857), "+str(delta_ninter)+")"
-                    cur2.execute(sql)
+    log("log.txt", "    Populating _work_otrouting_osm_nodes_ninter table")
+    sql = """
+    INSERT INTO _work_otrouting_osm_nodes_ninter (id, geom_point, ninter)
+    WITH all_nodes AS (
+        SELECT unnest(nodes) as node_id
+        FROM planet_osm_ways
+        WHERE tags -> 'highway' IS NOT NULL
+    )
+    SELECT
+        n.id,
+        ST_Transform(ST_SetSRID(ST_MakePoint(n.lon / 10000000.0, n.lat / 10000000.0), 4326), 3857),
+        counts.ninter
+    FROM
+        planet_osm_nodes n
+    JOIN
+        (SELECT node_id, count(*) as ninter FROM all_nodes GROUP BY node_id) as counts ON n.id = counts.node_id;
+    """
+    cur.execute(sql)
 
-                    if delta_ninter > 1:
-                        # this node is a new intersection or extremity of a way, add it in otrouting_points
-                        sql = "INSERT INTO otrouting_points (id, id_master, geom_point) VALUES("+str(tNodes[i])+", "+str(id_master)+", ST_Transform(ST_PointFromText('POINT("+geom+")', 4326), 3857))"
-                        cur2.execute(sql)
-                else:
-                    ninter = data2[0]
-                    if ninter <= 1 and ninter + delta_ninter > 1:
-                        # this node is a new intersection or extremity of a way, add it in otrouting_points
-                        sql = "INSERT INTO otrouting_points (id, id_master, geom_point) VALUES("+str(tNodes[i])+", "+str(id_master)+", ST_Transform(ST_PointFromText('POINT("+geom+")', 4326), 3857))"
-                        cur2.execute(sql)
-                    ninter = ninter + delta_ninter
-                    #DEBUG
-                    #if(tNodes[i] == 51413854 or tNodes[i] == 51414015):
-                    #    print(str(tNodes[i]) + '  :'+str(tNodes))
-                    cur2.execute("UPDATE _work_otrouting_osm_nodes_ninter SET ninter="+str(ninter)+" WHERE id="+str(tNodes[i]))
-    
+    log("log.txt", "    DELETE from otrouting_points")
+    cur.execute("DELETE FROM otrouting_points WHERE id_master = %s", (id_master,))
+
+    log("log.txt", "    Populating otrouting_points table")
+    sql = """
+    INSERT INTO otrouting_points (id, id_master, geom_point)
+    SELECT
+        id,
+        %s,
+        geom_point
+    FROM
+        _work_otrouting_osm_nodes_ninter
+    WHERE ninter > 1;
+    """
+    cur.execute(sql, (id_master,))
+
+    log("log.txt", "    DELETE from otrouting_ways")
+    cur.execute("DELETE FROM otrouting_ways WHERE id_master = %s", (id_master,))
+
+    log("log.txt", "    Populating otrouting_ways table")
+    sql = """
+    WITH ways_with_geom AS (
+        SELECT
+            w.osm_id,
+            w.tags,
+            w.nodes,
+            (SELECT ST_MakeLine(n.geom_point ORDER BY u.ord)
+             FROM unnest(w.nodes) WITH ORDINALITY AS u(node_id, ord)
+             JOIN _work_otrouting_osm_nodes_ninter n ON n.id = u.node_id
+            ) as geom
+        FROM
+            planet_osm_ways w
+        WHERE
+            w.tags -> 'highway' IS NOT NULL
+    ),
+    split_ways AS (
+        SELECT
+            w.osm_id,
+            w.tags,
+            w.nodes,
+            (ST_Dump(
+                ST_Split(w.geom, (SELECT ST_Collect(geom_point) FROM otrouting_points WHERE id_master = %s))
+            )).geom as geom
+        FROM
+            ways_with_geom w
+    )
+    INSERT INTO otrouting_ways (id_master, geom_linestring, source, target, dist_m, factor_pedestrian, factor_mountainbike, factor_roadcycle, factor_car, factorreverse_pedestrian, factorreverse_mountainbike, factorreverse_roadcycle, factorreverse_car, tags)
+    SELECT
+        %s,
+        s.geom,
+        ST_StartPoint(s.geom),
+        ST_EndPoint(s.geom),
+        ST_Length(s.geom),
+        CASE
+            WHEN get_tag(s.tags, 'highway') IN ('motorway_link', 'motorway', 'bus_guideway', 'escape', 'raceway') THEN 0
+            WHEN get_tag(s.tags, 'highway') IN ('trunk', 'trunk_link') THEN
+                CASE WHEN get_tag(s.tags, 'sidewalk') IS NOT NULL AND get_tag(s.tags, 'sidewalk') != 'no' THEN 100 * 1.15^4 ELSE 0 END
+            WHEN get_tag(s.tags, 'highway') IN ('primary', 'primary_link') THEN
+                CASE WHEN get_tag(s.tags, 'sidewalk') IS NOT NULL AND get_tag(s.tags, 'sidewalk') != 'no' THEN 1 ELSE 100 * 1.15^3 END
+            WHEN get_tag(s.tags, 'highway') IN ('secondary', 'secondary_link') THEN
+                CASE WHEN get_tag(s.tags, 'sidewalk') IS NOT NULL AND get_tag(s.tags, 'sidewalk') != 'no' THEN 1 ELSE 100 * 1.15^2 END
+            WHEN get_tag(s.tags, 'highway') IN ('tertiary', 'tertiary_link', 'unclassified') THEN
+                CASE WHEN get_tag(s.tags, 'sidewalk') IS NOT NULL AND get_tag(s.tags, 'sidewalk') != 'no' THEN 1 ELSE 100 * 1.15 END
+            WHEN get_tag(s.tags, 'highway') = 'track' THEN 100 * 1.15^-1
+            WHEN get_tag(s.tags, 'highway') IN ('cycleway', 'bridleway') THEN
+                CASE WHEN get_tag(s.tags, 'foot') IS NOT NULL AND get_tag(s.tags, 'foot') != 'no' THEN 100 * 1.15^-1 ELSE 0 END
+            WHEN get_tag(s.tags, 'highway') IN ('pedestrian', 'footway', 'path') THEN 100 * 1.15^-2
+            ELSE 100
+        END AS factor_pedestrian,
+        CASE
+            WHEN get_tag(s.tags, 'highway') IN ('motorway_link', 'motorway', 'bus_guideway', 'corridor', 'escape', 'raceway') THEN 0
+            WHEN get_tag(s.tags, 'highway') = 'steps' THEN 100 * 1.15^15
+            WHEN get_tag(s.tags, 'highway') IN ('trunk', 'trunk_link') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 0 END
+            WHEN get_tag(s.tags, 'highway') IN ('pedestrian', 'bridleway', 'footway') THEN
+                CASE WHEN get_tag(s.tags, 'bicycle') IS NOT NULL AND get_tag(s.tags, 'bicycle') != 'no' THEN 100 ELSE 0 END
+            WHEN get_tag(s.tags, 'highway') IN ('primary', 'primary_link') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 100 * 1.15^3 END
+            WHEN get_tag(s.tags, 'highway') IN ('secondary', 'secondary_link') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 100 * 1.15^2 END
+            WHEN get_tag(s.tags, 'highway') IN ('tertiary', 'tertiary_link', 'unclassified') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 100 * 1.15 END
+            WHEN get_tag(s.tags, 'highway') IN ('track', 'cycleway', 'path') THEN 100 * 1.15^-1
+            ELSE 100
+        END AS factor_mountainbike,
+        CASE
+            WHEN get_tag(s.tags, 'highway') IN ('motorway_link', 'motorway', 'bus_guideway', 'corridor', 'escape', 'raceway', 'steps') THEN 0
+            WHEN get_tag(s.tags, 'highway') IN ('trunk', 'trunk_link') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 0 END
+            WHEN get_tag(s.tags, 'highway') IN ('pedestrian', 'bridleway', 'footway') THEN
+                CASE WHEN get_tag(s.tags, 'bicycle') IS NOT NULL AND get_tag(s.tags, 'bicycle') != 'no' THEN 100 ELSE 0 END
+            WHEN get_tag(s.tags, 'highway') IN ('primary', 'primary_link') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 100 * 1.15^2 END
+            WHEN get_tag(s.tags, 'highway') IN ('secondary', 'secondary_link') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 100 * 1.15^1.5 END
+            WHEN get_tag(s.tags, 'highway') IN ('tertiary', 'tertiary_link', 'unclassified') THEN
+                CASE WHEN (get_tag(s.tags, 'cycleway lane') IS NOT NULL AND get_tag(s.tags, 'cycleway lane') != 'no') OR (get_tag(s.tags, 'cycleway tracks') IS NOT NULL AND get_tag(s.tags, 'cycleway tracks') != 'no') THEN 100 * 1.15^-1 ELSE 100 * 1.15 END
+            WHEN get_tag(s.tags, 'highway') IN ('track', 'path') THEN
+                CASE
+                    WHEN get_tag(s.tags, 'surface') IN ('paved', 'asphalt', 'concrete', 'metal', 'wood') THEN 100
+                    WHEN get_tag(s.tags, 'surface') IN ('concrete:lanes', 'concrete:plates', 'paving_stones', 'sett') THEN 100 * 1.15^2
+                    WHEN get_tag(s.tags, 'surface') IN ('unhewn_cobblestone', 'cobblestone', 'compacted', 'fine_gravel') THEN 100 * 1.15^10
+                    ELSE 100
+                END
+            WHEN get_tag(s.tags, 'highway') = 'cycleway' THEN 100 * 1.15^-1
+            ELSE 100
+        END AS factor_roadcycle,
+        CASE
+            WHEN get_tag(s.tags, 'highway') IN ('steps', 'pedestrian', 'path', 'bridleway', 'cycleway', 'footway', 'bus_guideway', 'corridor') THEN 0
+            WHEN get_tag(s.tags, 'highway') = 'track' THEN 100 * 1.15^15
+            WHEN get_tag(s.tags, 'highway') IN ('motorway_link', 'motorway') THEN 100 * 1.15^-2
+            WHEN get_tag(s.tags, 'highway') IN ('trunk', 'trunk_link') THEN 100 * 1.15^-1.5
+            WHEN get_tag(s.tags, 'highway') IN ('primary', 'primary_link') THEN 100 * 1.15^-1
+            WHEN get_tag(s.tags, 'highway') IN ('secondary', 'secondary_link') THEN 100 * 1.15^-0.6
+            WHEN get_tag(s.tags, 'highway') IN ('tertiary', 'tertiary_link') THEN 100 * 1.15^-0.3
+            WHEN get_tag(s.tags, 'highway') = 'unclassified' THEN 100
+            WHEN get_tag(s.tags, 'highway') = 'residential' THEN 100 * 1.15
+            WHEN get_tag(s.tags, 'highway') = 'living_street' THEN 100 * 1.15^2
+            ELSE 100
+        END AS factor_car,
+        1, 1, 1, 1, s.tags
+    FROM split_ways s;
+    """
+    cur.execute(sql, (id_master, id_master))
+
+
     conn.commit()
     cur.close()
-    cur2.close()
-    cur3.close()
     conn.close()
-    
-    log("log.txt", "    ALL ROWS READ IN " + str(int(time.time() - time0)) + "s")
-
-def add_geom_linestring(cur3, osmTags, tLonLat, source, target, dist, id_master):
-
-    geom = ''
-    for i in range(len(tLonLat)): 
-        lonlat = tLonLat[i]
-        if geom != '':
-            geom = geom + ','
-        geom = geom + lonlat[0] + ' ' + lonlat[1]
-    
-    tgeom = geom.split(',')
-    if len(tgeom) > 1:
-        geom = "LINESTRING("+geom+")"
-
-        #https://wiki.openstreetmap.org/wiki/Key:highway
-        #https://wiki.openstreetmap.org/wiki/OSM_tags_for_routing/Access_restrictions
-        #https://wiki.openstreetmap.org/wiki/Key:oneway
-        coef = 1.15
-
-        #########################################################
-        factor_pedestrian = 100
-        factorreverse_pedestrian = 1
-        #########################################################
-        if getfromdict(osmTags, "highway") in ["motorway_link", "motorway", "bus_guideway", "escape", "raceway"]:
-            factor_pedestrian = 0
-        elif getfromdict(osmTags, "highway") in ["trunk",     "trunk_link"]:
-            #check access restriction exception
-            if getfromdict(osmTags, "sidewalk") is not None and  getfromdict(osmTags, "sidewalk") != "no":
-                factor_pedestrian = factor_pedestrian*coef**4
-            else:
-                factor_pedestrian = 0
-        elif getfromdict(osmTags, "highway") in ["primary",    "primary_link"]:
-            #check if sidewalk
-            if getfromdict(osmTags, "sidewalk") is not None and  getfromdict(osmTags, "sidewalk") != "no":
-                factor_pedestrian = 1
-            else:
-                factor_pedestrian = factor_pedestrian*coef**3
-        elif getfromdict(osmTags, "highway") in ["secondary", "secondary_link"]:
-            #check if sidewalk
-            if getfromdict(osmTags, "sidewalk") is not None and  getfromdict(osmTags, "sidewalk") != "no":
-                factor_pedestrian = 1
-            else:
-                factor_pedestrian = factor_pedestrian*coef**2
-        elif getfromdict(osmTags, "highway") in ["tertiary", "tertiary_link", "unclassified"]:
-            #check if sidewalk
-            if getfromdict(osmTags, "sidewalk") is not None and  getfromdict(osmTags, "sidewalk") != "no":
-                factor_pedestrian = 1
-            else:
-                factor_pedestrian = factor_pedestrian*coef
-        elif getfromdict(osmTags, "highway") in ["track"]:
-            factor_pedestrian = factor_pedestrian*coef**-1
-        elif getfromdict(osmTags, "highway") in ["cycleway", "bridleway"]:
-            #check access restriction exception
-            if getfromdict(osmTags, "foot") is not None and  getfromdict(osmTags, "foot") != "no":
-                factor_pedestrian = factor_pedestrian*coef**-1
-            else:
-                factor_pedestrian = 0
-        elif getfromdict(osmTags, "highway") in ["pedestrian", "footway", "path"]:
-            factor_pedestrian = factor_pedestrian*coef**-2
-        factor_pedestrian = int(factor_pedestrian)
-
-        #########################################################
-        factor_mountainbike = 100
-        factorreverse_mountainbike = 1
-        #########################################################
-        #check highway
-        if getfromdict(osmTags, "highway") in ["motorway_link", "motorway", "bus_guideway", "corridor", "escape", "raceway"]:
-            factor_mountainbike = 0
-        elif getfromdict(osmTags, "highway") in ["steps"]:
-            factor_mountainbike = factor_mountainbike*coef**15
-        elif getfromdict(osmTags, "highway") in ["trunk",     "trunk_link"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_mountainbike = factor_mountainbike*coef**-1
-            else:
-                factor_mountainbike = 0
-        elif getfromdict(osmTags, "highway") in ["pedestrian", "bridleway", "footway"]:
-            #check access restriction exception
-            if getfromdict(osmTags, "bicycle") is not None and  getfromdict(osmTags, "bicycle") != "no":
-                factor_mountainbike = factor_mountainbike*1
-            else:
-                factor_mountainbike = 0
-        elif getfromdict(osmTags, "highway") in ["primary",    "primary_link"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_mountainbike = factor_mountainbike*coef**-1
-            else:
-                factor_mountainbike = factor_mountainbike*coef**3
-        elif getfromdict(osmTags, "highway") in ["secondary", "secondary_link"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_mountainbike = factor_mountainbike*coef**-1
-            else:
-                factor_mountainbike = factor_mountainbike*coef**2
-        elif getfromdict(osmTags, "highway") in ["tertiary", "tertiary_link", "unclassified"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_mountainbike = factor_mountainbike*coef**-1
-            else:
-                factor_mountainbike = factor_mountainbike*coef
-        elif getfromdict(osmTags, "highway") in ["track", "cycleway", "path"]:
-            factor_mountainbike = factor_mountainbike*coef**-1
-        # check mtb_scale and sac_scale
-        if getfromdict(osmTags, "mtb:scale") is not None: # mtb:scale applies to highway=path and highway=track
-            factor_mountainbike = factor_mountainbike*coef**-2
-        elif getfromdict(osmTags, "sac_scale") is not None:
-            if getfromdict(osmTags, "sac_scale") in ["mountain_hiking"]:
-                factor_mountainbike = factor_mountainbike*coef
-            elif getfromdict(osmTags, "sac_scale") in ["demanding_mountain_hiking"]:
-                factor_mountainbike = factor_mountainbike*coef**3
-            else:
-                factor_mountainbike = factor_mountainbike*0
-        factor_mountainbike = int(factor_mountainbike)
-        #
-        if getfromdict(osmTags, "highway") in ["motorway_link", "motorway", "trunk_link", "primary_link", "secondary_link", "tertiary_link"]:
-            factorreverse_mountainbike = -1
-        elif getfromdict(osmTags, "junction") == 'roundabout':
-            factorreverse_mountainbike = -1
-        elif getfromdict(osmTags, "oneway") == 'yes':
-            if getfromdict(osmTags, "oneway:bicycle") == 'no':
-                factorreverse_mountainbike = 1
-            else:
-                factorreverse_mountainbike = -1
-
-
-        #########################################################
-        factor_roadcycle = 100
-        factorreverse_roadcycle = 1
-        #########################################################
-        #check highway
-        if getfromdict(osmTags, "highway") in ["motorway_link", "motorway", "bus_guideway", "corridor", "escape", "raceway"]:
-            factor_roadcycle = 0
-        elif getfromdict(osmTags, "highway") in ["steps"]:
-            factor_roadcycle = 0
-        elif getfromdict(osmTags, "highway") in ["trunk",     "trunk_link"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_roadcycle = factor_roadcycle*coef**-1
-            else:
-                factor_roadcycle = 0
-        elif getfromdict(osmTags, "highway") in ["pedestrian", "bridleway", "footway"]:
-            #check access restriction exception
-            if getfromdict(osmTags, "bicycle") is not None and  getfromdict(osmTags, "bicycle") != "no":
-                factor_roadcycle = factor_roadcycle*1
-            else:
-                factor_roadcycle = 0
-        elif getfromdict(osmTags, "highway") in ["primary",    "primary_link"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_roadcycle = factor_roadcycle*coef**-1
-            else:
-                factor_roadcycle = factor_roadcycle*coef**2
-        elif getfromdict(osmTags, "highway") in ["secondary", "secondary_link"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_roadcycle = factor_roadcycle*coef**-1
-            else:
-                factor_roadcycle = factor_roadcycle*coef**1.5
-        elif getfromdict(osmTags, "highway") in ["tertiary", "tertiary_link", "unclassified"]:
-            #check cycleway lane / cycleway tracks
-            if (getfromdict(osmTags, "cycleway lane") is not None and  getfromdict(osmTags, "cycleway lane") != "no") or (getfromdict(osmTags, "cycleway tracks") is not None and  getfromdict(osmTags, "cycleway tracks") != "no"):
-                factor_roadcycle = factor_roadcycle*coef**-1
-            else:
-                factor_roadcycle = factor_roadcycle*coef**1
-        elif getfromdict(osmTags, "highway") in ["track", "path"]:
-            if getfromdict(osmTags, "surface") in ["paved", "asphalt", "concrete", "metal", "wood"]:
-                factor_roadcycle = factor_roadcycle
-            elif getfromdict(osmTags, "surface") in ["concrete:lanes", "concrete:plates", "paving_stones", "sett"]:
-                factor_roadcycle = factor_roadcycle*coef**2
-            elif getfromdict(osmTags, "surface") in ["unhewn_cobblestone", "cobblestone", "    compacted", "fine_gravel"]:
-                factor_roadcycle = factor_roadcycle*coef**10
-            else:
-                factor_roadcycle = factor_roadcycle
-        elif getfromdict(osmTags, "highway") in ["cycleway"]:
-            factor_roadcycle = factor_roadcycle*coef**-1
-        factor_roadcycle = int(factor_roadcycle)
-        #
-        if getfromdict(osmTags, "highway") in ["motorway_link", "motorway", "trunk_link", "primary_link", "secondary_link", "tertiary_link"]:
-            factorreverse_roadcycle = -1
-        elif getfromdict(osmTags, "junction") == 'roundabout':
-            factorreverse_roadcycle = -1
-        elif getfromdict(osmTags, "oneway") == 'yes':
-            if getfromdict(osmTags, "oneway:bicycle") == 'no':
-                factorreverse_roadcycle = 1
-            else:
-                factorreverse_roadcycle = -1
-
-        #########################################################
-        factor_car = 100
-        factorreverse_car = 1
-        #########################################################
-        #check highway
-        if getfromdict(osmTags, "highway") in ["steps", "pedestrian", "path", "bridleway", "cycleway", "footway", "bus_guideway", "corridor"]:
-            factor_car = 0
-        elif getfromdict(osmTags, "highway") in ["track"]:
-            factor_car = factor_car*coef**15
-        elif getfromdict(osmTags, "highway") in ["motorway_link", "motorway"]:
-            factor_car = factor_car*coef**-2
-        elif getfromdict(osmTags, "highway") in ["trunk", "trunk_link"]:
-            factor_car = factor_car*coef**-1.5
-        elif getfromdict(osmTags, "highway") in ["primary", "primary_link"]:
-            factor_car = factor_car*coef**-1
-        elif getfromdict(osmTags, "highway") in ["secondary", "secondary_link"]:
-            factor_car = factor_car*coef**-0.6
-        elif getfromdict(osmTags, "highway") in ["tertiary", "tertiary_link"]:
-            factor_car = factor_car*coef**-0.3
-        elif getfromdict(osmTags, "highway") in ["undefined"]:
-            factor_car = factor_car*1
-        elif getfromdict(osmTags, "highway") in ["residential"]:
-            factor_car = factor_car*coef
-        elif getfromdict(osmTags, "highway") in ["living_street"]:
-            factor_car = factor_car*coef**2
-        #speed
-        defaultspeed = {}
-        defaultspeed["default"] = 30
-        defaultspeed["track"] = 20
-        defaultspeed["motorway"] = 130
-        defaultspeed["motorway_link"] = 130
-        defaultspeed["trunk"] = 110
-        defaultspeed["trunk_link"] = 110
-        defaultspeed["primary"] = 80
-        defaultspeed["primary_link"] = 80
-        defaultspeed["secondary"] = 80
-        defaultspeed["secondary_link"] = 80
-        defaultspeed["tertiary"] = 60
-        defaultspeed["tertiary_link"] = 60
-        defaultspeed["undefined"] = 60
-        defaultspeed["residential"] = 50
-        defaultspeed["living_street"] = 30
-        maxspeed = 9999
-        if getfromdict(osmTags, "maxspeed") is not None:
-            tmaxspeed = getfromdict(osmTags, "maxspeed").split(' ')
-            if len(tmaxspeed) == 1:
-                maxspeed = tmaxspeed[0]
-            elif len(tmaxspeed) >= 2:
-                if tmaxspeed[1] == 'mph':
-                    maxspeed = tmaxspeed[0]*1,60934
-        # correction temporaire d'un bug rencontré avec maxspeed qui est parfois un string
-        try:
-            float(maxspeed)
-        except ValueError:
-            maxspeed = 9999
-        if getfromdict(osmTags, "highway") in defaultspeed.keys():
-            speed = min(defaultspeed[getfromdict(osmTags, "highway")],float(maxspeed))
-        else:
-            speed = min(defaultspeed["default"],float(maxspeed))
-        factor_car = factor_car*90/speed
-        factor_car = int(factor_car)
-        #
-        if getfromdict(osmTags, "highway") in ["motorway_link", "motorway", "trunk_link", "primary_link", "secondary_link", "tertiary_link"]:
-            factorreverse_car = -1
-        elif getfromdict(osmTags, "junction") == 'roundabout':
-            factorreverse_car = -1
-        elif getfromdict(osmTags, "oneway") == 'yes':
-            factorreverse_car = -1
-
-        #print dist
-        txt_tags = "ARRAY ["
-        for i in range(0, len(osmTags["index"])):
-            if i > 0:
-                txt_tags = txt_tags + ","
-            tag = osmTags["index"][i]
-            txt_tags = txt_tags + "'" + tag + "','" + osmTags[tag] + "'"
-        txt_tags = txt_tags+"]"
-        sql = "INSERT INTO otrouting_ways (id_master, geom_linestring, source, target, dist_m, factor_pedestrian, factor_mountainbike, factor_roadcycle, factor_car, factorreverse_pedestrian, factorreverse_mountainbike, factorreverse_roadcycle, factorreverse_car, tags) VALUES("+str(id_master)+", ST_GeomFromText('"+geom+"',3857), "+str(source)+", "+str(target)+", "+str(int(dist))+", "+str(factor_pedestrian)+", "+str(factor_mountainbike)+", "+str(factor_roadcycle)+", "+str(factor_car)+", "+str(factorreverse_pedestrian)+", "+str(factorreverse_mountainbike)+", "+str(factorreverse_roadcycle)+", "+str(factorreverse_car)+", " + txt_tags + ")"
-        #print(sql)
-        cur3.execute(sql)
-
-        sql = "SELECT id FROM otrouting_ways ORDER BY id DESC LIMIT 1"
-        cur3.execute(sql)
-        data3 = cur3.fetchone()
-        id = data3[0]
-        #print("    id_db: " + str(id))
-
-def create_ways(id_master):
-    conn = psycopg2.connect("dbname="+glob_db+" user="+glob_user+" password="+glob_password+" host="+glob_host+" port="+glob_port)
-    cur = conn.cursor()
-    cur2 = conn.cursor()
-    cur3 = conn.cursor()
-
-    #count number of rows to be read
-    cur.execute("SELECT COUNT(*) FROM planet_osm_ways")
-    data=cur.fetchone()
-    n_rows = data[0]
-    log("log.txt", "    " + str(n_rows) + " entries in planet_osm_ways table")
-    log("log.txt", "    select planet_osm_ways table entries")
-    cur.execute("SELECT nodes, tags FROM planet_osm_ways")
-    log("log.txt", "    START PROCESSING")
-    last_pc = -1
-    i_row = 0
-    i_geom = 1
-    time0 = time.time()
-    while True:
-        i_row = i_row + 1
-        #if i_row == 10:
-        #    break
-        if int(i_row*1.0/n_rows * 100) > last_pc:
-            last_pc = int(i_row*1.0/n_rows * 100)
-            log("log.txt", "        " + str(last_pc) + ' %   -   ' + str(int(time.time() - time0)) + "s" )
-        data = cur.fetchone()
-        if str(data).strip() == "None":
-            #all line have been read
-            break
-        #check if data corresponds to highway
-        osmTags = read_osm_tag(data[1], [])
-        if "highway" in osmTags["index"]:
-            # get nodes data from _work_otrouting_osm_nodes_ninter table
-            sql = "SELECT id, ST_AsText(geom_point) AS geom, ninter FROM _work_otrouting_osm_nodes_ninter WHERE id IN ("
-            tNodes = data[0]
-            #DEBUG
-            #if i_row == 2411:
-            #    print(str(tNodes))
-            for i in range(0, len(tNodes)):
-                if i > 0:
-                        sql = sql + ","
-                sql = sql + str(tNodes[i])
-                #if tNodes[i] == 51413854 or tNodes[i] == 51414015:
-                #    print(str(tNodes[i]) + ' :' + str(tNodes))
-            sql = sql + ")"
-            cur2.execute(sql)
-            dictNodes = {}
-            while True:
-                data2 = cur2.fetchone()
-                if str(data2).strip() != "None":
-                    id_geom = data2[0]
-                    geom_point = data2[1]
-                    geom_point = geom_point.replace("POINT(","")
-                    geom_point = geom_point.replace(")","")
-                    ninter = data2[2]
-                    dictNodes[str(id_geom)] = {}
-                    dictNodes[str(id_geom)]['ninter'] = ninter
-                    dictNodes[str(id_geom)]['geom_point'] = geom_point
-                else:
-                    break
-            #
-            for i in range(0, len(tNodes)):
-                #DEBUG
-                #if i_row == 2411:
-                #    print("      id_node,ninter: " + str(tNodes[i]) + ',' + str(dictNodes[str(tNodes[i])]['ninter']))
-                if i == 0:
-                    # if first point
-                    source = tNodes[i] 
-                    tLonLat = []
-                    dist = 0
-                    lonlat = dictNodes[str(tNodes[i])]['geom_point'].split(' ')
-                    tLonLat.append(lonlat)
-                else:
-                    lonlat = dictNodes[str(tNodes[i])]['geom_point'].split(' ')
-                    
-                    #lonlat1 = tLonLat[len(tLonLat)-1]
-                    #lonlat0 = tLonLat[len(tLonLat)-2]
-                    #dist2 = ((float(lonlat1[0])-float(lonlat0[0]))**2+(float(lonlat1[1])-float(lonlat0[1]))**2)**0.5
-                    
-                    lonlat1 = lonlat3857to4326(lonlat)
-                    lonlat0 = lonlat3857to4326(tLonLat[len(tLonLat)-1])
-                    dist2 = getdistancefromlonlat4326(lonlat1, lonlat0)
-
-                    tLonLat.append(lonlat)
-                    dist = dist + dist2
-                    if dictNodes[str(tNodes[i])]['ninter'] > 1:
-                        target = tNodes[i]
-                        add_geom_linestring(cur3, osmTags, tLonLat, source, target, dist, id_master)
-                        #reinit geom for next edge
-                        tLonLat = []
-                        source = tNodes[i]
-                        dist = 0
-                        tLonLat.append(lonlat)
-
-    log("log.txt", "    ALL ROWS READ IN " + str(int(time.time() - time0)) + "s")
-    
-    conn.commit()
-    cur.close()
-    cur2.close()
-    cur3.close()
-    conn.close()
-
-def lonlat3857to4326(lonlat3857):
-    lonlat4326 = [0,0]
-    #formula from https://gist.github.com/onderaltintas/6649521
-    lonlat4326[0] = float(lonlat3857[0]) *  180 / 20037508.34 ;
-    lonlat4326[1] = math.atan(math.exp(float(lonlat3857[1]) * math.pi / 20037508.34)) * 360 / math.pi - 90;
-    return lonlat4326
-
-def getdistancefromlonlat4326(lonlat1, lonlat2):
-    #check distance
-    theta1 = float(lonlat1[0]) * 3.1415 / 180.0
-    theta2 = float(lonlat2[0]) * 3.1415 / 180.0
-    phi1 = float(lonlat1[1]) * 3.1415 / 180.0
-    phi2 = float(lonlat2[1]) * 3.1415 / 180.0
-    Rt = 6371000.0 #earth radius in meters
-    Rtheta = Rt * math.cos((phi1 + phi2) / 2)
-    lengthPhi = abs(phi2 - phi1) * Rt
-    lengthTheta = abs(theta2 - theta1) * Rtheta
-    geodesicLengthApprox_m = math.pow(math.pow(lengthTheta, 2) + math.pow(lengthPhi, 2), 0.5)
-    
-    return geodesicLengthApprox_m
 
 def _____main_____():
     
@@ -944,16 +627,10 @@ def _____main_____():
         osm2pgsql(glob_t_input[i])
 
         log("log.txt", "")
-        log("log.txt", "read osm data and populate _work_otrouting_osm_nodes_ninter table" + " - " +str(glob_t_input[i])+" "+str(i+1)+"/"+str(len(glob_t_input)))
+        log("log.txt", "read osm data and populate database" + " - " +str(glob_t_input[i])+" "+str(i+1)+"/"+str(len(glob_t_input)))
         log("log.txt", "------------------------------------------------------------------------------")
         log("log.txt", str(time.strftime("%Y-%m-%d %H:%M:%S")))
-        create_points(id_master)
-
-        log("log.txt", "")
-        log("log.txt", "read osm data and populate otrouting_ways table" + " - " +str(glob_t_input[i])+" "+str(i+1)+"/"+str(len(glob_t_input)))
-        log("log.txt", "------------------------------------------------------------------------------")
-        log("log.txt", str(time.strftime("%Y-%m-%d %H:%M:%S")))
-        create_ways(id_master)
+        process_osm_data_sql(id_master)
 
         log("log.txt", "")
         log("log.txt", "update master database" + " - " +str(glob_t_input[i])+" "+str(i+1)+"/"+str(len(glob_t_input)))
